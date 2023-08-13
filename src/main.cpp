@@ -1,11 +1,16 @@
 #include <Arduino.h>
 
-const int IN1_pin = 9;      // 9番ピンを出力ピンIN1と定義
-const int IN2_pin = 8;      // 8番ピンを出力ピンIN2と定義
-const int ENA_pin = 10;     // 10番ピンを出力ピンENAと定義
-const int lmSW_L_pin = 12;  // 11番ピンをLMスイッチ1と定義
-const int lmSW_R_pin = 11;  // 12番ピンをLMスイッチ2と定義
-const int mainSW_pin = 7;
+const int IN1_pin = 9;  // 出力ピンIN1
+const int IN2_pin = 8;  // 出力ピンIN2
+const int ENA_pin = 7;  // 出力ピンENA
+
+const int IN3_pin = 5;  // 出力ピンIN3
+const int IN4_pin = 6;  // 出力ピンIN4
+const int ENB_pin = 4;  // 出力ピンENB
+
+const int lmSW_L_pin = 12;  // LMスイッチ1
+const int lmSW_R_pin = 11;  // LMスイッチ2
+const int mainSW_pin = 10;  // メインスイッチ
 
 bool lmSW_L_mode = false;
 bool lmSW_R_mode = false;
@@ -15,7 +20,8 @@ bool mainSW_status = false;
 int mode = 0;
 int old_mode;
 int drive_ready = 0;
-int motor_speed = 255;  // モーター速度
+int guide_motor_speed = 255;    // ガイド用モーター速度
+int winding_motor_speed = 255;  // 巻き取り用モーター速度
 
 const int stop_mode = 0;
 const int forward_mode = 1;
@@ -33,6 +39,11 @@ void setup() {
   pinMode(IN1_pin, OUTPUT);
   pinMode(IN2_pin, OUTPUT);
   pinMode(ENA_pin, OUTPUT);
+
+  pinMode(IN3_pin, OUTPUT);
+  pinMode(IN4_pin, OUTPUT);
+  pinMode(ENB_pin, OUTPUT);
+
   pinMode(lmSW_L_pin, INPUT_PULLUP);
   pinMode(lmSW_R_pin, INPUT_PULLUP);
   pinMode(mainSW_pin, INPUT_PULLUP);
@@ -42,11 +53,13 @@ void setup() {
 
 /**
  * @brief モーターを停止させる
- * 
+ *
  */
 void motorStop() {
   digitalWrite(IN1_pin, LOW);
   digitalWrite(IN2_pin, LOW);
+  digitalWrite(IN3_pin, LOW);
+  digitalWrite(IN4_pin, LOW);
 }
 
 /**
@@ -66,16 +79,26 @@ void safetyTimerStop() {
 }
 
 /**
- * @brief モーターを動作させる
+ * @brief ガイド用モーターを動作させる
  *
  * @param IN1 モーターのIN1
  * @param IN2 モーターのIN2
  */
-void motorDrive(int IN1, int IN2) {
+void guideMotorDrive(int IN1, int IN2) {
   safetyTimerStop();
   digitalWrite(IN1_pin, IN1);
   digitalWrite(IN2_pin, IN2);
-  analogWrite(ENA_pin, motor_speed);
+  analogWrite(ENA_pin, guide_motor_speed);
+}
+
+/**
+ * @brief 巻き取り用モーターを動作させる
+ *
+ */
+void windingMotorDrive() {
+  digitalWrite(IN3_pin, HIGH);
+  digitalWrite(IN4_pin, LOW);
+  analogWrite(ENB_pin, winding_motor_speed);
 }
 
 void loop() {
@@ -98,7 +121,6 @@ void loop() {
     } else if (lmSW_L_mode == true && lmSW_R_mode == false) {
       mode = back_mode;
     }
-
     if (mode != old_mode) {
       start_time = 0;
     }
@@ -110,12 +132,14 @@ void loop() {
         break;
 
       case forward_mode:
-        motorDrive(HIGH, LOW);
+        windingMotorDrive();
+        guideMotorDrive(HIGH, LOW);
         Serial.println("foward drive");
         break;
 
       case back_mode:
-        motorDrive(LOW, HIGH);
+        windingMotorDrive();
+        guideMotorDrive(LOW, HIGH);
         Serial.println("back drive");
         break;
 
