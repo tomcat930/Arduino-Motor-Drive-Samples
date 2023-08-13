@@ -40,6 +40,10 @@ void setup() {
   delay(3000);
 }
 
+/**
+ * @brief モーターを停止させる
+ * 
+ */
 void motorStop() {
   digitalWrite(IN1_pin, LOW);
   digitalWrite(IN2_pin, LOW);
